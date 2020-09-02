@@ -1,0 +1,392 @@
+---
+title: "Shiny"
+author: "Sweet"
+date: "4/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(shiny)
+library(ggplot2)
+ui <- fluidPage(
+      titlePanel("Baby Name Explorer"),
+      sidebarLayout(
+      
+        sidebarPanel(
+          textInput("name", "Enter a name", "David")
+          
+        ),
+        
+        # textOutput("q")
+        mainPanel(
+          plotOutput('trend')
+          
+        )
+      )
+      
+  
+)
+server <- function(input, output, session) {
+  # output$q <- renderText({
+  #   paste("Do you prefer, ", input$name, "?")
+  # })
+  output$trend <- renderPlot({
+    data_name <- subset(
+      babynames, name == input$name
+    )
+    ggplot(data_name) +
+      geom_line(
+        aes(x = year, y = prop, color = sex)
+      )
+    
+  })
+  
+  
+}
+
+shinyApp(ui = ui, server = server)
+
+selectInput("inputId",
+            "label",
+            choices = c("A","B", "C"))
+
+sliderInput("inputId",
+            "label",
+            value = 1925, min = 1900, max = 2000)
+            
+
+#inputs
+# text (textInput, selectInput), numbers (numericInput, sliderInput), booleans (checkBoxInput, radioInput), and dates (dateInput, dateRangeInput).
+
+#renderTable, Image, Plot; shiny documentation
+
+#DT, leaflet, plotly
+
+
+```
+
+
+
+
+```{r}
+ui <- fluidPage(
+  titlePanel("UFO Sightings"),
+  sidebarPanel(
+    selectInput("state", "Choose a U.S. state:", choices = unique(usa_ufo_sightings$state)),
+    dateRangeInput("dates", "Choose a date range:",
+      start = "1920-01-01",
+      end = "1950-01-01"
+    )
+  ),
+  # MODIFY CODE BELOW: Create a tab layout for the dashboard
+  mainPanel(
+  tabsetPanel(
+    tabPanel("Plot", plotOutput("shapes")),
+    tabPanel("Table", tableOutput("duration_table"))
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$shapes <- renderPlot({
+    usa_ufo_sightings %>%
+      filter(
+        state == input$state,
+        date_sighted >= input$dates[1],
+        date_sighted <= input$dates[2]
+      ) %>%
+      ggplot(aes(shape)) +
+      geom_bar() +
+      labs(
+        x = "Shape",
+        y = "# Sighted"
+      )
+  })
+
+  output$duration_table <- renderTable({
+    usa_ufo_sightings %>%
+      filter(
+        state == input$state,
+        date_sighted >= input$dates[1],
+        date_sighted <= input$dates[2]
+      ) %>%
+      group_by(shape) %>%
+      summarize(
+        nb_sighted = n(),
+        avg_duration_min = mean(duration_sec) / 60,
+        median_duration_min = median(duration_sec) / 60,
+        min_duration_min = min(duration_sec) / 60,
+        max_duration_min = max(duration_sec) / 60
+      )
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+ui <- fluidPage(
+  # CODE BELOW: Add an appropriate title
+  titlePanel("2014 Mental Health in Tech Survey"),
+  sidebarPanel(
+    # CODE BELOW: Add a checkboxGroupInput
+    checkboxGroupInput(
+      inputId = "mental_health_consequence",
+      label = "Do you think that discussing a mental health issue with your employer would have negative consequences?",
+      choices = c("Maybe", "Yes", "No"),
+      selected = "Maybe"
+    ),
+    # CODE BELOW: Add a pickerInput
+    pickerInput(
+      inputId = "mental_vs_physical",
+      label = "Do you feel that your employer takes mental health as seriously as physical health?",
+      choices = c("Don't Know", "No", "Yes"),
+      multiple = TRUE
+    )
+  ),
+  mainPanel(
+    # CODE BELOW: Display the output
+    plotOutput("age")
+  )
+)
+
+server <- function(input, output, session) {
+  # CODE BELOW: Build a histogram of the age of respondents
+  # Filtered by the two inputs
+  output$age <- renderPlot({
+    mental_health_survey %>%
+      filter(
+        mental_health_consequence %in% input$mental_health_consequence,
+        mental_vs_physical %in% input$mental_vs_physical
+      ) %>%
+      ggplot(aes(Age)) +
+      geom_histogram()
+  })
+}
+
+shinyApp(ui, server)
+
+
+```
+
+
+```{r}
+server <- function(input, output, session) {
+  output$age <- renderPlot({
+    # MODIFY CODE BELOW: Add validation that user selected a 3rd input
+    validate(
+      need(
+        input$mental_vs_physical != "", 
+        "Make a selection for mental vs. physical health."
+      )
+    )
+
+    mental_health_survey %>%
+      filter(
+        work_interfere == input$work_interfere,
+        mental_health_consequence %in% input$mental_health_consequence,
+        mental_vs_physical %in% input$mental_vs_physical
+      ) %>%
+      ggplot(aes(Age)) +
+      geom_histogram()
+  })
+}
+
+ui <- fluidPage(
+  titlePanel("2014 Mental Health in Tech Survey"),
+  sidebarPanel(
+    sliderTextInput(
+      inputId = "work_interfere",
+      label = "If you have a mental health condition, do you feel that it interferes with your work?", 
+      grid = TRUE,
+      force_edges = TRUE,
+      choices = c("Never", "Rarely", "Sometimes", "Often")
+    ),
+    checkboxGroupInput(
+      inputId = "mental_health_consequence",
+      label = "Do you think that discussing a mental health issue with your employer would have negative consequences?", 
+      choices = c("Maybe", "Yes", "No"),
+      selected = "Maybe"
+    ),
+    pickerInput(
+      inputId = "mental_vs_physical",
+      label = "Do you feel that your employer takes mental health as seriously as physical health?", 
+      choices = c("Don't Know", "No", "Yes"),
+      multiple = TRUE
+    )
+  ),
+  mainPanel(
+    plotOutput("age")  
+  )
+)
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+ui <- fluidPage(
+  titlePanel('Explore Cuisines'),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput('cuisine', 'Select Cuisine', unique(recipes$cuisine)),
+      sliderInput('nb_ingredients', 'Select No. of Ingredients', 1, 100, 10),
+    ),
+    mainPanel(
+      tabsetPanel(
+        # CODE BELOW: Add a plotly output named "plot_top_ingredients"
+        
+        tabPanel('Table', DT::DTOutput('dt_top_ingredients')),
+        tabPanel('Plot', plotly::plotlyOutput('plot_top_ingredients'))
+      )
+    )
+  )
+)
+server <- function(input, output, session) {
+  # CODE BELOW: Add a reactive expression named `rval_top_ingredients` that
+  # filters `recipes_enriched` for the selected cuisine and top ingredients
+  # based on the tf_idf value.
+  rval_top_ingredients <- reactive({
+    recipes_enriched %>% 
+    filter(cuisine == input$cuisine) %>% 
+    arrange(desc(tf_idf)) %>% 
+    head(input$nb_ingredients) %>%
+    mutate(ingredient = forcats::fct_reorder(ingredient, tf_idf))
+  })
+  
+  output$plot_top_ingredients <- plotly::renderPlotly({
+    rval_top_ingredients() %>%
+      ggplot(aes(x = ingredient, y = tf_idf)) +
+      geom_col() +
+      coord_flip()
+    
+  })
+  
+  
+  
+  
+  
+  
+  # CODE BELOW: Render a horizontal bar plot of top ingredients and 
+  # the tf_idf of recipes they get used in, and assign it to an output named 
+  # `plot_top_ingredients` 
+  
+  
+  
+  
+  
+  output$dt_top_ingredients <- DT::renderDT({
+    recipes %>% 
+      filter(cuisine == input$cuisine) %>% 
+      count(ingredient, name = 'nb_recipes') %>% 
+      arrange(desc(nb_recipes)) %>% 
+      head(input$nb_ingredients)
+  })
+}
+shinyApp(ui, server)
+```
+
+
+```{r}
+ui <- fluidPage(
+  titlePanel('Explore Cuisines'),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput('cuisine', 'Select Cuisine', unique(recipes$cuisine)),
+      sliderInput('nb_ingredients', 'Select No. of Ingredients', 5, 100, 20),
+    ),
+    mainPanel(
+      tabsetPanel(
+        # CODE BELOW: Add `d3wordcloudOutput` named `wc_ingredients` in a `tabPanel`
+        tabPanel('Word Cloud', d3wordcloud::d3wordcloudOutput('wc_ingredients', height = '400')),
+        tabPanel('Plot', plotly::plotlyOutput('plot_top_ingredients')),
+        tabPanel('Table', DT::DTOutput('dt_top_ingredients'))
+      )
+    )
+  )
+)
+server <- function(input, output, session){
+  # CODE BELOW: Render an interactive wordcloud of top distinctive ingredients 
+  # and the number of recipes they get used in, using 
+  # `d3wordcloud::renderD3wordcloud`, and assign it to an output named
+  # `wc_ingredients`.
+  output$wc_ingredients <- d3wordcloud::renderD3wordcloud({
+     ingredients_df <- rval_top_ingredients()
+     d3wordcloud(ingredients_df$ingredient, ingredients_df$nb_recipes, tooltip = TRUE)
+  })
+  rval_top_ingredients <- reactive({
+    recipes_enriched %>% 
+      filter(cuisine == input$cuisine) %>% 
+      arrange(desc(tf_idf)) %>% 
+      head(input$nb_ingredients) %>% 
+      mutate(ingredient = forcats::fct_reorder(ingredient, tf_idf))
+  })
+  output$plot_top_ingredients <- plotly::renderPlotly({
+    rval_top_ingredients() %>%
+      ggplot(aes(x = ingredient, y = tf_idf)) +
+      geom_col() +
+      coord_flip()
+  })
+  output$dt_top_ingredients <- DT::renderDT({
+    recipes %>% 
+      filter(cuisine == input$cuisine) %>% 
+      count(ingredient, name = 'nb_recipes') %>% 
+      arrange(desc(nb_recipes)) %>% 
+      head(input$nb_ingredients)
+  })
+}
+shinyApp(ui = ui, server= server)
+```
+
+
+```{r}
+ui <- bootstrapPage(
+  theme = shinythemes::shinytheme('simplex'),
+  leaflet::leafletOutput('map', width = '100%', height = '100%'),
+  absolutePanel(top = 10, right = 10, id = 'controls',
+    sliderInput('nb_fatalities', 'Minimum Fatalities', 1, 40, 10),
+    dateRangeInput(
+      'date_range', 'Select Date', "2010-01-01", "2019-12-01"
+    ),
+    # CODE BELOW: Add an action button named show_about
+    actionButton('show_about', 'About')
+  ),
+  tags$style(type = "text/css", "
+    html, body {width:100%;height:100%}     
+    #controls{background-color:white;padding:20px;}
+  ")
+)
+server <- function(input, output, session) {
+  # CODE BELOW: Use observeEvent to display a modal dialog
+  # with the help text stored in text_about.
+observeEvent(input$show_about, {
+showModal(modalDialog(text_about, title = 'About'))
+})
+  
+  
+  output$map <- leaflet::renderLeaflet({
+    mass_shootings %>% 
+      filter(
+        date >= input$date_range[1],
+        date <= input$date_range[2],
+        fatalities >= input$nb_fatalities
+      ) %>% 
+      leaflet() %>% 
+      setView( -98.58, 39.82, zoom = 5) %>% 
+      addTiles() %>% 
+      addCircleMarkers(
+        popup = ~ summary, radius = ~ sqrt(fatalities)*3,
+        fillColor = 'red', color = 'red', weight = 1
+      )
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+
+```
+
